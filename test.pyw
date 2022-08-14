@@ -1,19 +1,16 @@
+import gc
 import sys
 import numpy as np
 from PyQt6.QtWidgets import (
     QMainWindow, QApplication, QPushButton, QHBoxLayout, QCheckBox,
-    QGridLayout, QWidget, QVBoxLayout, QLineEdit, QLabel
+    QGridLayout, QWidget, QVBoxLayout, QLineEdit, QLabel,
 )
 from PyQt6.QtCore import Qt
 
 
 def get_difficulty(idx):
-    diffs = [3, 5, 10]
-
-    if idx > 2:
-        idx = 2
-
-    return diffs[idx]
+    diffs = [(3, 3), (5, 5), (9, 7), (11, 11), (11, 21)]
+    return diffs[min(idx, 4)]
 
 
 def give_title(turns):
@@ -25,35 +22,25 @@ def give_title(turns):
         "..noobie?",
         "the worst noob I've ever seen...",
     ]
-
-    turns //= 7
-    if turns > 5:
-        turns = 5
-
-    return "You are " + titles[turns]
+    return "You are " + titles[min(turns // 7, 5)]
 
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
 
-        self.HEIGHT = 5
-        self.WIDTH = 5
-
-        self.ALL = self.HEIGHT * self.WIDTH
-
-        self.setFixedSize(350, 350)
-        self.setStyleSheet("background-color: grey;")
+        self.width = 5
+        self.height = 5
+        self.square = self.width * self.height
 
         self.levels = []
         self.button_matrix = []
-        self.matrix = np.ones(self.ALL, dtype=int)
+        self.matrix = np.ones(self.square, dtype=int)
 
         self.restart_button = QPushButton("Restart?")
-        self.restart_button.setEnabled(False)
         self.restart_button.clicked.connect(self.restart)
 
-        self.turn_count = 0
+        self.setStyleSheet("background-color: grey;")
         self.color = [
             "background-color: #282828; padding: 20px;",
             "background-color: #a0a0a4; padding: 20px;",
@@ -62,6 +49,7 @@ class MainWindow(QMainWindow):
         self.win_label = QLabel()
         self.win_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
 
+        self.turn_count = 0
         self.turn_count_label = QLabel()
         self.turn_count_label.setAlignment(Qt.AlignmentFlag.AlignRight)
 
@@ -69,17 +57,14 @@ class MainWindow(QMainWindow):
         hl.addWidget(self.win_label)
         hl.addWidget(self.turn_count_label)
 
-        gl = QGridLayout()
-        gl.addLayout(self.set_field(), 0, 0)
-        gl.addLayout(hl, 1, 0)
-        gl.addWidget(self.restart_button, 2, 0)
-
-        vl = self.set_levels()
-
-        gl.addLayout(vl, 0, 1)
+        self.gl = QGridLayout()
+        self.gl.addLayout(self.set_field(), 0, 0)
+        self.gl.addLayout(hl, 1, 0)
+        self.gl.addWidget(self.restart_button, 2, 0)
+        self.gl.addLayout(self.set_levels(), 0, 1)
 
         wg = QWidget()
-        wg.setLayout(gl)
+        wg.setLayout(self.gl)
         self.setCentralWidget(wg)
 
         self.restart()
@@ -87,9 +72,11 @@ class MainWindow(QMainWindow):
     def set_levels(self):
         vl = QVBoxLayout()
 
-        diff = ["Easy", "Normal", "Hard"]
+        diff = ["Easy", "Normal", "Intermediate", "Hard", "Insane"]
         for i, name in enumerate(diff, 0):
             box = QCheckBox(name)
+            if diff[i] == "Normal":
+                box.setChecked(True)
             box.clicked.connect(self.levels_clicked)
             vl.addWidget(box)
             self.levels.append(box)
@@ -98,18 +85,17 @@ class MainWindow(QMainWindow):
 
     def set_field(self):
         gl = QGridLayout()
-
         gl.setSpacing(0)
 
-        for i in range(self.HEIGHT):
-            for j in range(self.WIDTH):
+        for y in range(self.height):
+            for x in range(self.width):
                 button = QPushButton()
 
                 button.setFixedSize(50, 50)
                 button.setStyleSheet(self.color[1])
                 button.pressed.connect(self.field_clicked)
 
-                gl.addWidget(button, i, j)
+                gl.addWidget(button, x, y)
                 self.button_matrix.append(button)
 
         gl.setColumnStretch(0, 1)
@@ -126,13 +112,20 @@ class MainWindow(QMainWindow):
             else:
                 box.setChecked(True)
 
-        diff = get_difficulty(idx)
+        self.width, self.height = get_difficulty(idx)
+        self.square = self.width * self.height
 
-        self.HEIGHT = self.WIDTH = diff
-        self.ALL = self.HEIGHT * self.WIDTH
+        for button in self.button_matrix:
+            button.setParent(None)
 
-        # TODO: not working
-        self.__init__()
+        self.button_matrix = []
+        self.matrix = np.ones(self.square, dtype=int)
+
+        self.gl.addLayout(self.set_field(), 0, 0)
+        self.restart()
+
+        QApplication.instance().processEvents()
+        self.adjustSize()
 
     def field_clicked(self):
         self.turn_count += 1
@@ -142,15 +135,15 @@ class MainWindow(QMainWindow):
 
         self.switch(idx)
 
-        if self.matrix.sum() == self.ALL:
+        if self.matrix.sum() == self.square:
             self.win()
 
     def switch(self, idx):
-        for i in range(idx % self.WIDTH, self.ALL, self.WIDTH):
+        for i in range(idx % self.width, self.square, self.width):
             self.matrix[i] = (self.matrix[i] + 1) % 2
             self.button_matrix[i].setStyleSheet(self.color[self.matrix[i]])
 
-        for i in range((idx // self.WIDTH) * self.WIDTH, (idx // self.WIDTH + 1) * self.WIDTH):
+        for i in range((idx // self.width) * self.width, (idx // self.width + 1) * self.width):
             if i == idx:
                 continue
             self.matrix[i] = (self.matrix[i] + 1) % 2
@@ -160,13 +153,16 @@ class MainWindow(QMainWindow):
         for button in self.button_matrix:
             button.setEnabled(False)
         self.win_label.setText("You win!!! \n" + give_title(self.turn_count))
-        self.restart_button.setEnabled(True)
 
     def restart(self):
-        self.restart_button.setEnabled(False)
+        how_many = np.random.randint(self.square // 2, self.square)
 
-        for i in np.random.randint(0, self.ALL, 100):
-            self.switch(i)
+        while True:
+            for i in np.random.randint(0, self.square, how_many):
+                self.switch(i)
+
+            if self.matrix.sum() != self.square:
+                break
 
         for button in self.button_matrix:
             button.setEnabled(True)
