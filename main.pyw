@@ -1,16 +1,12 @@
-import gc
+import json
 import sys
+from test import run_tests
 import numpy as np
 from PyQt6.QtWidgets import (
     QMainWindow, QApplication, QPushButton, QHBoxLayout, QCheckBox,
     QGridLayout, QWidget, QVBoxLayout, QLineEdit, QLabel,
 )
 from PyQt6.QtCore import Qt
-
-
-def get_difficulty(idx):
-    diffs = [(3, 3), (5, 5), (9, 7), (11, 11), (11, 21)]
-    return diffs[min(idx, 4)]
 
 
 def give_title(turns):
@@ -29,9 +25,14 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
 
-        self.width = 5
-        self.height = 5
+        run_tests()
+
+        with open("config.json", "r") as file:
+            self.cfg = json.load(file)
+
+        self.width, self.height = self.cfg["Levels"]["Normal"]
         self.square = self.width * self.height
+        self.diffs = [name for name in self.cfg["Levels"]]
 
         self.levels = []
         self.button_matrix = []
@@ -72,10 +73,9 @@ class MainWindow(QMainWindow):
     def set_levels(self):
         vl = QVBoxLayout()
 
-        diff = ["Easy", "Normal", "Intermediate", "Hard", "Insane"]
-        for i, name in enumerate(diff, 0):
+        for i, name in enumerate(self.diffs, 0):
             box = QCheckBox(name)
-            if diff[i] == "Normal":
+            if name == "Normal":
                 box.setChecked(True)
             box.clicked.connect(self.levels_clicked)
             vl.addWidget(box)
@@ -112,7 +112,7 @@ class MainWindow(QMainWindow):
             else:
                 box.setChecked(True)
 
-        self.width, self.height = get_difficulty(idx)
+        self.width, self.height = self.cfg["Levels"][self.diffs[idx]]
         self.square = self.width * self.height
 
         for button in self.button_matrix:
@@ -123,9 +123,17 @@ class MainWindow(QMainWindow):
 
         self.gl.addLayout(self.set_field(), 0, 0)
         self.restart()
+        self.centralize()
 
+    def centralize(self):
         QApplication.instance().processEvents()
         self.adjustSize()
+
+        frame_geo = self.frameGeometry()
+        screen = self.window().windowHandle().screen()
+        center_loc = screen.geometry().center()
+        frame_geo.moveCenter(center_loc)
+        self.move(frame_geo.topLeft())
 
     def field_clicked(self):
         self.turn_count += 1
@@ -170,6 +178,7 @@ class MainWindow(QMainWindow):
         self.win_label.setText("Turn all Gray tiles to White")
         self.turn_count_label.setText("Turns: 0")
         self.turn_count = 0
+
 
 
 app = QApplication(sys.argv)
