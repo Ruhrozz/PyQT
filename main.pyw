@@ -26,7 +26,6 @@ class MainWindow(QMainWindow):
         super(MainWindow, self).__init__()
 
         run_tests()
-
         with open("config.json", "r") as file:
             self.cfg = json.load(file)
 
@@ -37,9 +36,6 @@ class MainWindow(QMainWindow):
         self.levels = []
         self.button_matrix = []
         self.matrix = np.ones(self.square, dtype=int)
-
-        self.restart_button = QPushButton("Restart?")
-        self.restart_button.clicked.connect(self.restart)
 
         self.setStyleSheet("background-color: grey;")
         self.color = [
@@ -61,7 +57,11 @@ class MainWindow(QMainWindow):
         self.gl = QGridLayout()
         self.gl.addLayout(self.set_field(), 0, 0)
         self.gl.addLayout(hl, 1, 0)
-        self.gl.addWidget(self.restart_button, 2, 0)
+
+        restart_button = QPushButton("Restart?")
+        restart_button.clicked.connect(self.restart)
+
+        self.gl.addWidget(restart_button, 2, 0)
         self.gl.addLayout(self.set_levels(), 0, 1)
 
         wg = QWidget()
@@ -178,7 +178,6 @@ class MainWindow(QMainWindow):
         self.win_label.setText("Turn all Gray tiles to White")
         self.turn_count_label.setText("Turns: 0")
         self.turn_count = 0
-
 
 
 app = QApplication(sys.argv)
