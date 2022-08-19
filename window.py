@@ -1,51 +1,21 @@
 import sys
-import numpy as np
 from PyQt6.QtWidgets import (
     QMainWindow, QPushButton, QApplication, QLabel,
-    QGridLayout, QWidget, QButtonGroup, QVBoxLayout,
-    QLineEdit, QHBoxLayout, QDialog
+    QWidget, QVBoxLayout,
+    QHBoxLayout,
 )
-from PyQt6.QtCore import Qt
 from field import Field
 from skin import get_color
-
-
-class MyDialog(QDialog):
-    def __init__(self):
-        super().__init__()
-        self.nickname = None
-
-        self.blank = QLineEdit()
-
-        self.btn = QPushButton("Submit")
-        self.btn.clicked.connect(self.submit)
-
-        vl = QVBoxLayout()
-        vl.addWidget(QLabel("Nickname:"))
-        hl = QHBoxLayout()
-        hl.addWidget(self.blank)
-        hl.addWidget(self.btn)
-        vl.addLayout(hl)
-
-        self.layout = vl
-        self.setLayout(self.layout)
-
-    def submit(self):
-        if self.blank.text():
-            self.nickname = self.blank.text()
-            self.accept()
+from dialogs import WIYNDialog
 
 
 class MyWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+
         self.field = Field()
-        self.skin = "Desert"
-
-        self.nickname = None
-        self.write_nickname()
-
-        hl = QVBoxLayout()
+        self.skin = "Standard"
+        self.nickname = WIYNDialog.write_nickname()
 
         self.restart = QPushButton()
         self.restart.setText("Restart")
@@ -55,6 +25,7 @@ class MyWindow(QMainWindow):
         stats.addWidget(QLabel(self.nickname))
         stats.addWidget(self.field.turns_label)
 
+        hl = QVBoxLayout()
         hl.addWidget(self.field)
         hl.addLayout(stats)
         hl.addWidget(self.restart)
@@ -69,13 +40,6 @@ class MyWindow(QMainWindow):
         self.restart.setStyleSheet(get_color(self.skin)["Restart"])
         self.field.skin = self.skin
         self.field.field_colorize()
-
-    def write_nickname(self):
-        dialog = MyDialog()
-        if dialog.exec():
-            self.nickname = dialog.nickname
-        else:
-            quit(0)
 
 
 app = QApplication(sys.argv)
