@@ -42,7 +42,8 @@ class MyWindow(QMainWindow):
         self.field.field_colorize()
 
 
-app = QApplication(sys.argv)
-w = MyWindow()
-w.show()
-app.exec()
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    w = MyWindow()
+    w.show()
+    app.exec()
